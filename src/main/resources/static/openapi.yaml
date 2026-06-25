@@ -1,0 +1,1194 @@
+openapi: 3.0.0
+info:
+  title: Enicilion Platform API
+  description: Complete OpenAPI specification for Enicilion Enterprise Java Spring Boot Backend.
+  version: 1.0.0
+servers:
+  - url: http://localhost:4000
+    description: Local Development Server
+paths:
+  /api/events:
+    get:
+      summary: Retrieve all active public events (published or ongoing) (Public)
+      tags:
+        - Events
+      responses:
+        '200':
+          description: List of active events returned successfully
+
+  /api/events/{slug}:
+    get:
+      summary: Retrieve an event and its active ticket tiers by slug (Public)
+      tags:
+        - Events
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+          example: motorscape-2026
+      responses:
+        '200':
+          description: Event detail returned successfully
+
+  /api/auth/register:
+    post:
+      summary: Register a new user or upgrade a guest account
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fullName
+                - email
+                - password
+              properties:
+                fullName:
+                  type: string
+                  example: Jane Doe
+                email:
+                  type: string
+                  format: email
+                  example: jane@example.com
+                password:
+                  type: string
+                  example: Password123
+                whatsapp:
+                  type: string
+                  example: "+919876543210"
+                referredBy:
+                  type: string
+                  example: REFC12
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Validation error or email already exists
+
+  /api/auth/login:
+    post:
+      summary: Authenticate user and return access token
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: jane@example.com
+                password:
+                  type: string
+                  example: Password123
+      responses:
+        '200':
+          description: Successfully authenticated
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: refresh_token=jwt_cookie; HttpOnly; Secure; Path=/; SameSite=Lax
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials or account banned
+
+  /api/auth/refresh:
+    post:
+      summary: Generate new access token using refresh cookie
+      tags:
+        - Authentication
+      parameters:
+        - in: cookie
+          name: refresh_token
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Access token refreshed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      access_token:
+                        type: string
+                        example: new_jwt_access_token_here
+        '401':
+          description: Invalid or expired refresh token
+
+  /api/auth/logout:
+    post:
+      summary: Clear refresh token cookie and logout user
+      tags:
+        - Authentication
+      responses:
+        '200':
+          description: Logged out successfully
+
+  /api/tickets/checkout:
+    post:
+      summary: Book spectator tickets and create payment intent
+      tags:
+        - Tickets
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          schema:
+            type: string
+          description: Unique string to prevent duplicate orders
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - items
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - eventId
+                      - tierId
+                      - quantity
+                    properties:
+                      eventId:
+                        type: string
+                        format: uuid
+                      tierId:
+                        type: string
+                        format: uuid
+                      quantity:
+                        type: integer
+                        minimum: 1
+                        example: 2
+                couponCode:
+                  type: string
+                  example: OFFER10
+                clientTotal:
+                  type: number
+                  example: 1049.00
+                guestName:
+                  type: string
+                  example: Guest User
+                guestEmail:
+                  type: string
+                  format: email
+                  example: guest@example.com
+                guestPhone:
+                  type: string
+                  example: "+919876543210"
+                idempotencyKey:
+                  type: string
+      responses:
+        '201':
+          description: Booking initialized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      paymentId:
+                        type: string
+                        format: uuid
+                      amount:
+                        type: number
+                        example: 1049.00
+                      currency:
+                        type: string
+                        example: INR
+        '400':
+          description: Out of stock, calculation mismatch, or invalid coupon
+
+  /api/tickets/scan:
+    post:
+      summary: Verify/Check in ticket at the venue gates (Secure Scanner Interface)
+      tags:
+        - Tickets
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - code
+                - password
+              properties:
+                code:
+                  type: string
+                  example: MS26-X7G2F9P5-K9WZ
+                password:
+                  type: string
+                  example: enicilion2026
+      responses:
+        '200':
+          description: Verification response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      valid:
+                        type: boolean
+                        example: true
+                      message:
+                        type: string
+                        example: "✅ Valid! Welcome in."
+                      holderName:
+                        type: string
+                        example: "Jane Doe"
+        '401':
+          description: Invalid scanner password
+
+  /api/tickets/pdf/{code}:
+    get:
+      summary: Download PDF tickets by ticket code
+      tags:
+        - Tickets
+      parameters:
+        - in: path
+          name: code
+          required: true
+          schema:
+            type: string
+            example: MS26-X7G2F9P5-K9WZ
+      responses:
+        '200':
+          description: PDF binary file stream
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Ticket code not found
+
+  /api/tickets/payment/{paymentId}/pdf:
+    get:
+      summary: Download all PDF tickets under a payment transaction
+      tags:
+        - Tickets
+      parameters:
+        - in: path
+          name: paymentId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: PDF binary file stream
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Payment is pending/unpaid
+        '404':
+          description: Payment ID not found
+
+  /api/tickets/{code}/apple-wallet:
+    get:
+      summary: Generate and download PKPass file for Apple Wallet
+      tags:
+        - Tickets
+      parameters:
+        - in: path
+          name: code
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: PKPass binary stream
+          content:
+            application/vnd.apple.pkpass:
+              schema:
+                type: string
+                format: binary
+
+  /api/tickets/{code}/google-wallet:
+    get:
+      summary: Get Google Wallet save-to-pass JWT redirection link
+      tags:
+        - Tickets
+      parameters:
+        - in: path
+          name: code
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Redirection link
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      saveUrl:
+                        type: string
+                        example: https://pay.google.com/gp/v/save/eyJhbGci...
+
+  /api/tickets:
+    get:
+      summary: Retrieve authenticated user's tickets
+      tags:
+        - Tickets
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User tickets list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        code:
+                          type: string
+                        tierName:
+                          type: string
+                        status:
+                          type: string
+                          enum: [booked, paid, checked_in, cancelled]
+
+  /api/coupons/validate:
+    post:
+      summary: Dry-run check for coupon discount calculations
+      tags:
+        - Coupons
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - code
+                - subtotal
+              properties:
+                code:
+                  type: string
+                  example: OFFER10
+                subtotal:
+                  type: number
+                  example: 1000.00
+      responses:
+        '200':
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: OFFER10
+                      discountAmount:
+                        type: number
+                        example: 100.00
+                      total:
+                        type: number
+                        example: 900.00
+                      discountPercentage:
+                        type: integer
+                        example: 10
+
+  /api/payments/razorpay/verify:
+    post:
+      summary: Callback to verify Razorpay signature and mark transaction as paid
+      tags:
+        - Payments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - payment_id
+                - razorpay_order_id
+                - razorpay_payment_id
+                - razorpay_signature
+              properties:
+                payment_id:
+                  type: string
+                  format: uuid
+                razorpay_order_id:
+                  type: string
+                razorpay_payment_id:
+                  type: string
+                razorpay_signature:
+                  type: string
+      responses:
+        '200':
+          description: Verification response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                        example: paid
+                      paymentId:
+                        type: string
+                        format: uuid
+
+  /api/support/tickets:
+    post:
+      summary: Submit contact support queries
+      tags:
+        - Support Helpdesk
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - category
+                - message
+              properties:
+                category:
+                  type: string
+                  example: billing
+                message:
+                  type: string
+                  example: Help with ticket payment
+                name:
+                  type: string
+                  example: Jane Doe
+                phone:
+                  type: string
+                email:
+                  type: string
+                  format: email
+      responses:
+        '201':
+          description: Support query recorded
+
+  /api/applications:
+    post:
+      summary: Submit drifter showcase application with modified car specs and photos
+      tags:
+        - Drifter Applications
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - eventId
+                - make
+                - model
+                - year
+              properties:
+                eventId:
+                  type: string
+                  format: uuid
+                make:
+                  type: string
+                  example: Nissan
+                model:
+                  type: string
+                  example: Silvia S15
+                year:
+                  type: integer
+                  example: 2002
+                color:
+                  type: string
+                  example: Pearl White
+                licensePlate:
+                  type: string
+                  example: DL-3C-1234
+                vin:
+                  type: string
+                  example: JH4DC23100Sxxxxxx
+                engineSpec:
+                  type: string
+                  example: SR20DET
+                modifications:
+                  type: string
+                  example: Garrett Turbo, HKS Coilover, Bride Seats
+                photos:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        '201':
+          description: Application successfully submitted
+    get:
+      summary: Fetch list of all drifter applications (Admin / Staff Only)
+      tags:
+        - Drifter Applications
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of applications
+
+  /api/applications/{id}/review:
+    post:
+      summary: Approve or reject a drifter application (Admin / Staff Only)
+      tags:
+        - Drifter Applications
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum: [approved, rejected, waitlisted]
+                adminNotes:
+                  type: string
+                  example: Excellent vehicle specs, approved.
+  /api/admin/events:
+    get:
+      summary: List events for the authenticated admin or staff's organizer (Admin / Staff Only)
+      tags:
+        - Administration
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of events returned successfully
+    post:
+      summary: Create a new event (Admin / Staff Only)
+      tags:
+        - Administration
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - slug
+                - location
+                - eventDate
+              properties:
+                name:
+                  type: string
+                slug:
+                  type: string
+                description:
+                  type: string
+                location:
+                  type: string
+                eventDate:
+                  type: string
+                  format: date-time
+                status:
+                  type: string
+                  enum: [draft, published, ongoing, completed, cancelled]
+                registrationSchema:
+                  type: string
+                organizerId:
+                  type: string
+                  format: uuid
+      responses:
+        '201':
+          description: Event created successfully
+
+  /api/admin/events/{id}:
+    put:
+      summary: Update an existing event (Admin / Staff Only)
+      tags:
+        - Administration
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - slug
+                - location
+                - eventDate
+              properties:
+                name:
+                  type: string
+                slug:
+                  type: string
+                description:
+                  type: string
+                location:
+                  type: string
+                eventDate:
+                  type: string
+                  format: date-time
+                status:
+                  type: string
+                  enum: [draft, published, ongoing, completed, cancelled]
+                registrationSchema:
+                  type: string
+                organizerId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Event updated successfully
+    delete:
+      summary: Delete an event and all associated tiers (Admin / Staff Only)
+      tags:
+        - Administration
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event deleted successfully
+
+  /api/admin/events/{id}/tiers:
+    get:
+      summary: List all ticket tiers (both public and private) for an event (Admin / Staff Only)
+      tags:
+        - Administration
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Ticket tiers list returned successfully
+    post:
+      summary: Create a ticket tier for an event (Admin / Staff Only)
+      tags:
+        - Administration
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - price
+              properties:
+                name:
+                  type: string
+                price:
+                  type: number
+                quantity:
+                  type: integer
+                description:
+                  type: string
+                isPublic:
+                  type: boolean
+      responses:
+        '201':
+          description: Ticket tier created successfully
+
+  /api/admin/events/{eventId}/tiers/{tierId}:
+    put:
+      summary: Update an existing ticket tier (Admin / Staff Only)
+      tags:
+        - Administration
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: eventId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: tierId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - price
+              properties:
+                name:
+                  type: string
+                price:
+                  type: number
+                quantity:
+                  type: integer
+                description:
+                  type: string
+                isPublic:
+                  type: boolean
+      responses:
+        '200':
+          description: Ticket tier updated successfully
+    delete:
+      summary: Delete a ticket tier (Admin / Staff Only)
+      tags:
+        - Administration
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: eventId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: tierId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Ticket tier deleted successfully
+
+  /api/admin/events/{id}/settle:
+    post:
+      summary: Perform financial settlement and freeze revenue metrics for a completed event (Admin / Staff Only)
+      tags:
+        - Administration
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Financial metrics calculated and frozen successfully
+    get:
+      summary: Retrieve the frozen settlement summary for an event (Admin / Staff Only)
+      tags:
+        - Administration
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Settlement summary returned successfully
+
+  /api/admin/treasury:
+    get:
+      summary: Get system revenue and transactions stats (Admin / Staff Only)
+      tags:
+        - Administration
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 0
+          description: Zero-based page index
+        - in: query
+          name: size
+          schema:
+            type: integer
+            default: 20
+          description: Size of page to retrieve
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Search term (name or email) to filter transactions
+      responses:
+        '200':
+          description: Stats payload
+
+  /api/admin/checkins/recent:
+    get:
+      summary: Get recent gate check-in attempts (Admin / Staff Only)
+      tags:
+        - Administration
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of recent check-in events and buyer details
+
+  /api/admin/checkins/stream:
+    get:
+      summary: Stream live gate check-in attempts in real-time (Admin / Staff Only)
+      tags:
+        - Administration
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Event stream of real-time check-in notifications (SSE)
+
+  /api/admin/permissions/my:
+    get:
+      summary: Get the permitted administrative features list for the currently logged-in user (Admin / Staff Only)
+      tags:
+        - Administration
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of dynamic features the current user has access to
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      type: string
+
+  /api/admin/permissions/staff:
+    get:
+      summary: Get all staff dynamic feature permissions (Admin Only)
+      tags:
+        - Administration
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of staff email permission mappings
+    post:
+      summary: Grant feature permission to a staff member (Admin Only)
+      tags:
+        - Administration
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - feature
+              properties:
+                email:
+                  type: string
+                  format: email
+                feature:
+                  type: string
+                  enum: [TREASURY, BOX_OFFICE, DRIFTER_REVIEW, INFLUENCER_MGMT, LIVE_CHECKIN]
+      responses:
+        '201':
+          description: Permission successfully granted
+    delete:
+      summary: Revoke feature permission from a staff member (Admin Only)
+      tags:
+        - Administration
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: email
+          required: true
+          schema:
+            type: string
+            format: email
+          description: Staff email address
+        - in: query
+          name: feature
+          required: true
+          schema:
+            type: string
+          description: Feature permission key to revoke
+      responses:
+        '200':
+          description: Permission successfully revoked
+
+  /api/admin/box-office/buy:
+    post:
+      summary: Create spectator tickets offline/manual payments (Admin / Staff Only)
+      tags:
+        - Administration
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+                fullName:
+                  type: string
+                phone:
+                  type: string
+                tierId:
+                  type: string
+                  format: uuid
+                  description: "Deprecated: Use items instead for multi-item selection"
+                quantity:
+                  type: integer
+                  minimum: 1
+                  description: "Deprecated: Use items instead for multi-item selection"
+                items:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - tier_id
+                      - quantity
+                    properties:
+                      tier_id:
+                        type: string
+                        format: uuid
+                      quantity:
+                        type: integer
+                        minimum: 1
+      responses:
+        '201':
+          description: Tickets generated successfully
+
+  /api/admin/tickets/export-csv:
+    get:
+      summary: Export ticket registrations list to CSV file (Admin / Staff Only)
+      tags:
+        - Administration
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: startDate
+          schema:
+            type: string
+            example: "2026-06-01"
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            example: "2026-06-30"
+      responses:
+        '200':
+          description: CSV file download
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+
+  /api/influencer/apply:
+    post:
+      summary: User submits application to become an affiliate influencer
+      tags:
+        - Influencers
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fullName
+                - email
+                - phone
+                - socialLinks
+                - followerCount
+                - nicheDescription
+                - paymentDetails
+              properties:
+                fullName:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                phone:
+                  type: string
+                socialLinks:
+                  type: string
+                followerCount:
+                  type: integer
+                nicheDescription:
+                  type: string
+                paymentDetails:
+                  type: string
+      responses:
+        '200':
+          description: Affiliate application processed
+
+  /api/influencer/dashboard:
+    get:
+      summary: Fetch influencer affiliate metrics, earnings, and coupons
+      tags:
+        - Influencers
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: dashboard details
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    AuthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            access_token:
+              type: string
+            user:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                fullName:
+                  type: string
+                email:
+                  type: string
+                role:
+                  type: string
+                whatsapp:
+                  type: string

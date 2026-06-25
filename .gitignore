@@ -1,0 +1,29 @@
+# Local environment variables
+.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Maven build directory
+target/
+
+# Compiled Java class files
+*.class
+
+# Log files
+*.log
+
+# Package file formats
+*.jar
+*.war
+*.ear
+
+# IDE configurations
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+.factorypath

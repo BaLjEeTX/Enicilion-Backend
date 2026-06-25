@@ -1,0 +1,85 @@
+server:
+  port: 4000
+  tomcat:
+    threads:
+      max: 200
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 15MB
+
+spring:
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/enicilion}
+    username: ${DATABASE_USERNAME:postgres}
+    password: ${DATABASE_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 30
+      minimum-idle: 10
+      idle-timeout: 30000
+      pool-name: EnicilionHikariPool
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          batch_size: 25
+        order_inserts: true
+        order_updates: true
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    out-of-order: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+
+app:
+  jwt:
+    access-secret: ${JWT_ACCESS_SECRET:dGhpcy1pcy1hLXNlY3JldC1rZXktZm9yLWp3dC1hY2Nlc3MtdG9rZW4tc2VjdXJlLWVuaWNpbGlvbi1uZXc=}
+    refresh-secret: ${JWT_REFRESH_SECRET:dGhpcy1pcy1hLXNlY3JldC1rZXktZm9yLWp3dC1yZWZyZXNoLXRva2VuLXNlY3VyZS1lbmljaWxpb24tbmV3=}
+    access-expiration-ms: 900000      # 15 minutes
+    refresh-expiration-ms: 604800000   # 7 days
+  scanner:
+    password: ${SCANNER_PASSWORD:enicilion2026}
+  security:
+    token-salt: ${TOKEN_SALT:enicilion-secure-salt-2026}
+  firebase:
+    service-account-json: ${FIREBASE_SERVICE_ACCOUNT:}
+  razorpay:
+    key-id: ${RAZORPAY_KEY_ID:rzp_test_dummy}
+    key-secret: ${RAZORPAY_KEY_SECRET:dummy_secret}
+    webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:dummy_webhook_secret}
+    sandbox-bypass-allowed: ${RAZORPAY_SANDBOX_BYPASS_ALLOWED:true}
+  zeptomail:
+    api-key: ${ZEPTOMAIL_TOKEN:${ZEPTOMAIL_API_KEY:dummy_zeptomail_api_key}}
+    sender-email: ${FROM_EMAIL:${ZEPTOMAIL_SENDER:tickets@enicilion.com}}
+  aisensy:
+    api-key: ${AISENSY_API_KEY:dummy_aisensy_api_key}
+    campaign-name: ${AISENSY_TICKET_CAMPAIGN:motorscape_ticket_confirm}
+  frontend-url: ${FRONTEND_URL:http://localhost:4000}
+
+notification:
+  whatsapp:
+    token: ${WA_TOKEN}
+    phone-number-id: ${WA_PHONE_NUMBER_ID}
+    template-name: ${WA_TEMPLATE_NAME:enc_ticket_confirmed_v2}
+    api-url: https://graph.facebook.com/v19.0
+  email:
+    zepto-token: ${ZEPTOMAIL_TOKEN}
+    zepto-api-url: ${ZEPTOMAIL_API_URL:https://api.zeptomail.in/v1.1/email}
+    from-address: ${FROM_EMAIL:tickets@enicilion.com}
+    from-name: ${FROM_NAME:Enicilion Motorscape}
+  pdf:
+    base-url: ${PUBLIC_API_BASE_URL:http://localhost:4000/api}
+
