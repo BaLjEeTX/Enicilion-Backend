@@ -43,6 +43,7 @@ services:
       - FROM_EMAIL=${FROM_EMAIL}
       - FROM_NAME=${FROM_NAME}
       - PUBLIC_API_BASE_URL=${PUBLIC_API_BASE_URL}
+      - FRONTEND_URL=${FRONTEND_URL}
     depends_on:
       redis:
         condition: service_healthy
