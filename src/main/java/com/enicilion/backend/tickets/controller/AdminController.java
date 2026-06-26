@@ -22,6 +22,7 @@ import com.enicilion.backend.tickets.dto.BoxOfficeRequest;
 import com.enicilion.backend.tickets.entity.SpectatorTicket;
 import com.enicilion.backend.tickets.service.CheckoutService;
 import com.enicilion.backend.tickets.service.EmailNotificationService;
+import com.enicilion.backend.notification.service.NotificationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -49,6 +50,7 @@ public class AdminController {
     private final StaffPermissionService staffPermissionService;
     private final EmailNotificationService emailNotificationService;
     private final SecurityContextService securityContextService;
+    private final NotificationService notificationService;
 
 
 
@@ -153,6 +155,12 @@ public class AdminController {
                 request.getPhone(),
                 items
         );
+
+        // Queue ticket confirmation task in outbox for asynchronous email & WhatsApp processing
+        if (!tickets.isEmpty()) {
+            SpectatorTicket first = tickets.get(0);
+            notificationService.queueTicketConfirmation(first.getTicketCode(), null, null);
+        }
 
         List<Map<String, Object>> ticketList = new ArrayList<>();
         for (SpectatorTicket t : tickets) {

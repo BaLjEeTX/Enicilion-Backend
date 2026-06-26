@@ -14,6 +14,7 @@ import com.enicilion.backend.tickets.service.CheckoutService;
 import com.enicilion.backend.tickets.service.LiveCheckinService;
 import com.enicilion.backend.auth.service.StaffPermissionService;
 import com.enicilion.backend.auth.service.SecurityContextService;
+import com.enicilion.backend.notification.service.NotificationService;
 import com.enicilion.backend.auth.entity.StaffPermission;
 import com.enicilion.backend.auth.dto.StaffPermissionRequest;
 import org.junit.jupiter.api.AfterEach;
@@ -53,6 +54,8 @@ class AdminControllerTest {
     private StaffPermissionService staffPermissionService;
     @Mock
     private com.enicilion.backend.tickets.service.EmailNotificationService emailNotificationService;
+    @Mock
+    private NotificationService notificationService;
 
     @Mock
     private SecurityContext securityContext;
