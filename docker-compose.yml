@@ -1,24 +1,6 @@
 
 services:
-  # 1. PostgreSQL Database Service
-  db:
-    image: postgres:15-alpine
-    container_name: enicilion-db
-    environment:
-      POSTGRES_DB: enicilion
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d enicilion"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  # 2. Redis Caching Service
+  # 1. Redis Caching Service
   redis:
     image: redis:7-alpine
     container_name: enicilion-redis
@@ -32,16 +14,16 @@ services:
       timeout: 5s
       retries: 5
 
-  # 3. Enicilion Spring Boot Application Service
+  # 2. Enicilion Spring Boot Application Service
   app:
     build: .
     container_name: enicilion-app
     ports:
       - "4000:4000"
     environment:
-      - DATABASE_URL=${DATABASE_URL:-jdbc:postgresql://db:5432/enicilion}
-      - DATABASE_USERNAME=${DATABASE_USERNAME:-postgres}
-      - DATABASE_PASSWORD=${DATABASE_PASSWORD:-postgres}
+      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_USERNAME=${DATABASE_USERNAME}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - JWT_ACCESS_SECRET=dGhpcy1pcy1hLXNlY3JldC1rZXktZm9yLWp3dC1hY2Nlc3MtdG9rZW4tc2VjdXJlLWVuaWNpbGlvbi1uZXc=
@@ -62,11 +44,8 @@ services:
       - FROM_NAME=${FROM_NAME}
       - PUBLIC_API_BASE_URL=${PUBLIC_API_BASE_URL}
     depends_on:
-      db:
-        condition: service_healthy
       redis:
         condition: service_healthy
 
 volumes:
-  postgres_data:
   redis_data:
