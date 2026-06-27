@@ -47,8 +47,8 @@ public class WhatsAppService {
         } else {
             // Default modern parameters (6 params) for v3, v4, and any custom templates
             bodyParameters = List.of(
-                Map.of("type", "text", "text", safe(req.getEventName())),
                 Map.of("type", "text", "text", safe(req.getUserName())),
+                Map.of("type", "text", "text", safe(req.getEventName())),
                 Map.of("type", "text", "text", safe(req.getTierName(), "General Admission")),
                 Map.of("type", "text", "text", safe(req.getOrderId())),
                 Map.of("type", "text", "text", safe(req.getEventDate())),
