@@ -37,7 +37,15 @@ public class WhatsAppService {
         String templateName = props.getWhatsapp().getTemplateName();
         List<Map<String, String>> bodyParameters;
 
-        if ("enc_ticket_confirmed_v3".equals(templateName)) {
+        if (templateName != null && (templateName.endsWith("_v1") || templateName.endsWith("_v2"))) {
+            // Legacy/fallback parameters (3 params)
+            bodyParameters = List.of(
+                Map.of("type", "text", "text", safe(req.getUserName())),
+                Map.of("type", "text", "text", safe(req.getTierName(), "General Admission")),
+                Map.of("type", "text", "text", safe(req.getOrderId()))
+            );
+        } else {
+            // Default modern parameters (6 params) for v3, v4, and any custom templates
             bodyParameters = List.of(
                 Map.of("type", "text", "text", safe(req.getEventName())),
                 Map.of("type", "text", "text", safe(req.getUserName())),
@@ -45,13 +53,6 @@ public class WhatsAppService {
                 Map.of("type", "text", "text", safe(req.getOrderId())),
                 Map.of("type", "text", "text", safe(req.getEventDate())),
                 Map.of("type", "text", "text", safe(req.getEventLocation()))
-            );
-        } else {
-            // Fallback to enc_ticket_confirmed_v2 parameters
-            bodyParameters = List.of(
-                Map.of("type", "text", "text", safe(req.getUserName())),
-                Map.of("type", "text", "text", safe(req.getTierName(), "General Admission")),
-                Map.of("type", "text", "text", safe(req.getOrderId()))
             );
         }
 

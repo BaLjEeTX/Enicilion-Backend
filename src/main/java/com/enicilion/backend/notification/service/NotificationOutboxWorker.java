@@ -29,6 +29,10 @@ public class NotificationOutboxWorker {
     private static final int BATCH_SIZE = 5;
     private static final int MAX_ATTEMPTS = 3;
 
+    private static final java.time.format.DateTimeFormatter DATE_FORMATTER = java.time.format.DateTimeFormatter
+            .ofPattern("dd MMM yyyy, hh:mm a")
+            .withZone(java.time.ZoneId.of("Asia/Kolkata"));
+
     @Scheduled(fixedDelay = 10000) // Runs every 10 seconds
     @Transactional
     public void processOutbox() {
@@ -69,7 +73,7 @@ public class NotificationOutboxWorker {
                         .userPhone(phone)
                         .ticketCode(ticket.getTicketCode())
                         .eventName(ticket.getEvent().getName())
-                        .eventDate(ticket.getEvent().getEventDate() != null ? ticket.getEvent().getEventDate().toString() : "TBD")
+                        .eventDate(ticket.getEvent().getEventDate() != null ? DATE_FORMATTER.format(ticket.getEvent().getEventDate()) : "TBD")
                         .eventLocation(ticket.getEvent().getLocation())
                         .orderId(ticket.getPayment() != null ? ticket.getPayment().getId().toString() : ticket.getTicketCode())
                         .quantity(1)
